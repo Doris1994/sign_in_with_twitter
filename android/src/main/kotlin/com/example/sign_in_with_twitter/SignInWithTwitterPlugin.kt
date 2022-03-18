@@ -77,13 +77,24 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
         pendingResult = null
     }
 
+    private fun getCurrentSession( call: MethodCall):Boolean {
+        initializeAuthClient(call)
+        val session = TwitterCore.getInstance().sessionManager.activeSession
+        if(session !=null &&  session.userId!=null){
+            getTwitterUserEmail(session)
+            return true
+        }
+        return false
+    }
 
     private fun authorize(result: Result, call: MethodCall) {
+        if(getCurrentSession(call)) return
         setPendingResult("authorize", result)
         initializeAuthClient(call)?.authorize(mActivity, object : Callback<TwitterSession>() {
             override fun success(result: com.twitter.sdk.android.core.Result<TwitterSession>) {
                 getTwitterUserEmail(result.data)
             }
+
             override fun failure(exception: TwitterException) {
                 if (pendingResult != null) {
                     val resultMap: HashMap<String, Any> = object : HashMap<String, Any>() {
@@ -105,6 +116,7 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
             override fun success(result: com.twitter.sdk.android.core.Result<String>?) {
                 loggedIn(session, result?.data)
             }
+
             override fun failure(exception: TwitterException?) {
                 loggedIn(session, null)
             }
