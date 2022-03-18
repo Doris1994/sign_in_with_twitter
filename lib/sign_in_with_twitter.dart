@@ -102,6 +102,7 @@ enum TwitterLoginStatus {
 class TwitterSession {
   final String? secret;
   final String? token;
+  final String? email;
 
   /// The user's unique identifier, usually a long series of numbers.
   final String userId;
@@ -119,6 +120,7 @@ class TwitterSession {
       : secret = map['secret'],
         token = map['token'],
         userId = map['userId'],
+        email = map['email'],
         username = map['username'];
 
   /// Transforms this access token to a [Map].
@@ -131,6 +133,7 @@ class TwitterSession {
       'token': token,
       'userId': userId,
       'username': username,
+      'email': email
     };
   }
 
@@ -142,7 +145,8 @@ class TwitterSession {
           secret == other.secret &&
           token == other.token &&
           userId == other.userId &&
-          username == other.username;
+          username == other.username &&
+          email == other.email;
 
   @override
   int get hashCode =>
