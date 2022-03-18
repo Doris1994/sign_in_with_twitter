@@ -38,10 +38,21 @@
   [[Twitter sharedInstance]
       logInWithCompletion:^(TWTRSession *session, NSError *error) {
         if (error == nil) {
-          result(@{
-            @"status" : @"loggedIn",
-            @"session" : [self sessionDataToMap:session],
-          });
+          TWTRAPIClient *client = [TWTRAPIClient clientWithCurrentUser];
+          [client requestEmailForCurrentUser:^(NSString *email, NSError *error) {
+            result(@{
+              @"status" : @"loggedIn",
+              @"session" : [self sessionDataToMap:session email:email],
+            });
+          }];
+          // TWTRAPIClient *client = [TWTRAPIClient clientWithCurrentUser];
+          // [client loadUserWithID:userId completion:^(TWTRUser * _Nullable user, NSError * _Nullable error) {
+          //     if (user) {
+          //         NSLog(@"头像url:%@",user.profileImageURL);
+          //     }else{
+          //         NSLog(@"error:%@",error.localizedDescription);
+          //     }
+          // }];
         } else {
           result(@{
             @"status" : @"error",
@@ -51,16 +62,16 @@
       }];
 }
 
-- (id)sessionDataToMap:(TWTRSession *)session {
+- (id)sessionDataToMap:(TWTRSession *)session email:(NSString *)email {
   if (session == nil) {
     return [NSNull null];
   }
-
   return @{
     @"secret" : session.authTokenSecret,
     @"token" : session.authToken,
     @"userId" : session.userID,
     @"username" : session.userName,
+    @"email" : email
   };
 }
 
