@@ -3,10 +3,13 @@ package com.example.sign_in_with_twitter
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
 import android.webkit.CookieManager
 import android.webkit.CookieSyncManager
+import android.webkit.WebView
 import androidx.annotation.NonNull
 import com.twitter.sdk.android.core.*
+import com.twitter.sdk.android.core.identity.OAuthActivity
 import com.twitter.sdk.android.core.identity.TwitterAuthClient
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -16,6 +19,9 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener
+import java.lang.Exception
+import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.util.*
 
 /** SignInWithTwitterPlugin */
@@ -77,10 +83,10 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
         pendingResult = null
     }
 
-    private fun getCurrentSession( call: MethodCall):Boolean {
+    private fun getCurrentSession(call: MethodCall): Boolean {
         initializeAuthClient(call)
         val session = TwitterCore.getInstance().sessionManager.activeSession
-        if(session !=null &&  session.userId!=null){
+        if (session != null && session.userId != null) {
             getTwitterUserEmail(session)
             return true
         }
@@ -90,24 +96,83 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
     private fun authorize(result: Result, call: MethodCall) {
 //        if(getCurrentSession(call)) return
         setPendingResult("authorize", result)
-        initializeAuthClient(call)?.authorize(mActivity, object : Callback<TwitterSession>() {
-            override fun success(result: com.twitter.sdk.android.core.Result<TwitterSession>) {
-                getTwitterUserEmail(result.data)
-            }
+        try {
+            initializeAuthClient(call)?.authorize(mActivity, object : Callback<TwitterSession>() {
+                override fun success(result: com.twitter.sdk.android.core.Result<TwitterSession>) {
+                    getTwitterUserEmail(result.data)
+                }
 
-            override fun failure(exception: TwitterException) {
-                if (pendingResult != null) {
-                    val resultMap: HashMap<String, Any> = object : HashMap<String, Any>() {
-                        init {
-                            put("status", "error")
-                            put("errorMessage", exception.message ?: "")
-                        }
-                    }
-                    pendingResult!!.success(resultMap)
-                    pendingResult = null
+                override fun failure(exception: TwitterException) {
+                    error(exception.message)
+                }
+            })
+        } catch (e: Exception) {
+            error(e.message)
+        }
+        Handler().postDelayed({
+            setJavaScriptEnabled()
+        }, 3000)
+        Handler ().postDelayed({
+            setJavaScriptEnabled()
+        }, 5000)
+    }
+
+
+    private fun error(message: String?) {
+        if (pendingResult != null) {
+            val resultMap: HashMap<String, Any> = object : HashMap<String, Any>() {
+                init {
+                    put("status", "error")
+                    put("errorMessage", message ?: "")
                 }
             }
-        })
+            pendingResult!!.success(resultMap)
+            pendingResult = null
+        }
+    }
+
+    private fun setJavaScriptEnabled() {
+        val oAuthActivityInstance =
+            Class.forName("com.twitter.sdk.android.core.identity.OAuthActivity")
+        val activity = getActivity()
+        if (activity != null && activity is OAuthActivity) {
+            val field = oAuthActivityInstance.getDeclaredField("webView")
+            field.isAccessible = true
+            val webView2 = field.get(activity) as WebView
+            webView2.settings.javaScriptEnabled = true
+        }
+    }
+
+    private fun getActivity(): Activity? {
+        var activityThreadClass: Class<*>? = null
+        try {
+            activityThreadClass = Class.forName("android.app.ActivityThread")
+            val activityThread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
+            val activitiesField: Field = activityThreadClass.getDeclaredField("mActivities")
+            activitiesField.isAccessible = true
+            val activities = activitiesField.get(activityThread) as Map<*, *>
+            for (activityRecord in activities.values) {
+                val activityRecordClass: Class<*> = activityRecord!!.javaClass
+                val pausedField: Field = activityRecordClass.getDeclaredField("paused")
+                pausedField.isAccessible = true
+                if (!pausedField.getBoolean(activityRecord)) {
+                    val activityField: Field = activityRecordClass.getDeclaredField("activity")
+                    activityField.isAccessible = true
+                    return activityField.get(activityRecord) as Activity
+                }
+            }
+        } catch (e: ClassNotFoundException) {
+            e.printStackTrace()
+        } catch (e: NoSuchMethodException) {
+            e.printStackTrace()
+        } catch (e: IllegalAccessException) {
+            e.printStackTrace()
+        } catch (e: InvocationTargetException) {
+            e.printStackTrace()
+        } catch (e: NoSuchFieldException) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun getTwitterUserEmail(session: TwitterSession?) {
@@ -120,7 +185,7 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
             override fun failure(exception: TwitterException?) {
                 loggedIn(session, null)
             }
-        });
+        })
     }
 
     private fun loggedIn(session: TwitterSession?, email: String?) {
