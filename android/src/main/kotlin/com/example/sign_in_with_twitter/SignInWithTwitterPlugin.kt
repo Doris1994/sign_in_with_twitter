@@ -88,7 +88,7 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
     }
 
     private fun authorize(result: Result, call: MethodCall) {
-        if(getCurrentSession(call)) return
+//        if(getCurrentSession(call)) return
         setPendingResult("authorize", result)
         initializeAuthClient(call)?.authorize(mActivity, object : Callback<TwitterSession>() {
             override fun success(result: com.twitter.sdk.android.core.Result<TwitterSession>) {
