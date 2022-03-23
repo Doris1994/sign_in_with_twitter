@@ -44,11 +44,11 @@ android {
         minSdkVersion 16
     }
 
-    buildTypes {
-        release {
-            consumerProguardFiles "proguard-rules.pro"
-        }
-    }
+//    buildTypes {
+//        release {
+//            consumerProguardFiles "proguard-rules.pro"
+//        }
+//    }
 }
 
 dependencies {

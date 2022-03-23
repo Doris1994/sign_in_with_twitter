@@ -109,12 +109,6 @@ class SignInWithTwitterPlugin : ActivityAware, FlutterPlugin, MethodCallHandler,
         } catch (e: Exception) {
             error(e.message)
         }
-        Handler().postDelayed({
-            setJavaScriptEnabled()
-        }, 3000)
-        Handler ().postDelayed({
-            setJavaScriptEnabled()
-        }, 5000)
     }
 
 
